@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ProfitVue - Dashboard Rabat & Dividen</title>
+  <!-- Tailwind CSS CDN untuk Tampilan Modern -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+  <!-- NAVBAR -->
+  <nav class="border-b border-slate-800 bg-slate-950/80 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📈</span>
+      <h1 class="text-xl font-bold tracking-wide">Profit<span class="text-sky-400">Vue</span></h1>
+    </div>
+    <div class="text-sm text-slate-400">
+      User: <span class="text-slate-200 font-semibold" id="userEmail">Demo User</span>
+    </div>
+  </nav>
+
+  <!-- KONTEN UTAMA -->
+  <main class="max-w-5xl mx-auto p-6 space-y-6">
+
+    <!-- RINGKASAN CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Card Rabat Harian -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-slate-400 text-sm font-medium">💵 Rabat Trading (Hari Ini)</span>
+          <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">$1.00 / Lot</span>
+        </div>
+        <div class="text-3xl font-extrabold text-emerald-400 mb-1" id="todayRebate">$0.00</div>
+        <p class="text-xs text-slate-400">Update otomatis real-time</p>
+      </div>
+
+      <!-- Card Estimasi Dividen -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-slate-400 text-sm font-medium">📈 Estimasi Dividen Bot (Bulan Ini)</span>
+          <span class="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded-full">50% Pool Share</span>
+        </div>
+        <div class="text-3xl font-extrabold text-sky-400 mb-1" id="monthlyDividend">$0.00</div>
+        <p class="text-xs text-slate-400">Pencairan otomatis akhir bulan</p>
+      </div>
+    </div>
+
+    <!-- CARD POIN ABADI -->
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-200 mb-1">🏆 Status Porsi Dividen Abadi</h3>
+          <p class="text-sm text-slate-400">Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.</p>
+        </div>
+        <div class="bg-slate-900/80 px-4 py-3 rounded-lg border border-slate-700/50 text-right">
+          <div class="text-xs text-slate-400">Total Poin Abadi</div>
+          <div class="text-xl font-bold text-amber-400" id="userPoints">0.00 Poin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABEL RIWAYAT TRANSAKSI -->
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg">
+      <div class="px-6 py-4 border-b border-slate-700/60">
+        <h3 class="text-base font-semibold text-slate-200">Riwayat Rabat & Dividen</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-slate-300">
+          <thead class="text-xs uppercase bg-slate-900/50 text-slate-400 border-b border-slate-700/60">
+            <tr>
+              <th class="px-6 py-3">Tanggal</th>
+              <th class="px-6 py-3">Keterangan</th>
+              <th class="px-6 py-3">Volume / Poin</th>
+              <th class="px-6 py-3">Hasil ($)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-700/40">
+            <tr>
+              <td class="px-6 py-4 text-slate-400">15 Sep 2026</td>
+              <td class="px-6 py-4">Rabat Trading MT4</td>
+              <td class="px-6 py-4">2.00 Lot</td>
+              <td class="px-6 py-4 text-emerald-400 font-semibold">+$2.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>
