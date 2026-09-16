@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ProfitVue - Dashboard Rabat & Dividen</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Library -->
+  <!-- Supabase JS Client Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col justify-between">
@@ -48,7 +48,7 @@
       </div>
       <div class="flex items-center gap-2 w-full md:w-auto">
         <input type="text" id="mt5Input" placeholder="Contoh: 14829102" disabled class="bg-slate-900 border border-slate-700 text-slate-400 text-sm rounded-lg p-2.5 w-full md:w-64 cursor-not-allowed opacity-60">
-        <button id="saveMt5Btn" disabled class="bg-slate-700 text-slate-400 font-medium text-sm px-4 py-2.5 rounded-lg cursor-not-allowed opacity-60">Simpan</button>
+        <button id="saveMt5Btn" onclick="saveMt5Account()" disabled class="bg-slate-700 text-slate-400 font-medium text-sm px-4 py-2.5 rounded-lg cursor-not-allowed opacity-60">Simpan</button>
       </div>
     </div>
 
@@ -60,7 +60,7 @@
           <span id="txtRebateTitle" class="text-slate-400 text-sm font-medium">💵 Rabat Trading (Hari Ini)</span>
           <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">$1.00 / Lot</span>
         </div>
-        <div class="text-3xl font-extrabold text-emerald-400 mb-1">$0.00</div>
+        <div id="rebateValue" class="text-3xl font-extrabold text-emerald-400 mb-1">$0.00</div>
         <p id="txtRebateSub" class="text-xs text-slate-400">Update otomatis real-time</p>
       </div>
 
@@ -70,7 +70,7 @@
           <span id="txtDividendTitle" class="text-slate-400 text-sm font-medium">📈 Estimasi Dividen Bot (Bulan Ini)</span>
           <span class="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded-full">50% Pool Share</span>
         </div>
-        <div class="text-3xl font-extrabold text-sky-400 mb-1">$0.00</div>
+        <div id="dividendValue" class="text-3xl font-extrabold text-sky-400 mb-1">$0.00</div>
         <p id="txtDividendSub" class="text-xs text-slate-400">Pencairan otomatis akhir bulan</p>
       </div>
     </div>
@@ -84,7 +84,7 @@
         </div>
         <div class="bg-slate-900/80 px-4 py-3 rounded-lg border border-slate-700/50 text-right">
           <div id="txtPointsLabel" class="text-xs text-slate-400">Total Poin Abadi</div>
-          <div class="text-xl font-bold text-amber-400">0.00 Poin</div>
+          <div id="pointsValue" class="text-xl font-bold text-amber-400">0.00 Poin</div>
         </div>
       </div>
     </div>
@@ -120,8 +120,14 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT LOGIC TRANSLATION -->
+  <!-- SUPABASE INTEGRATION SCRIPT -->
   <script>
+    const SUPABASE_URL = "https://aahmyoivscfuytpastlp.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhaG15b2l2c2NmdXl0cGFzdGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjgyNjAsImV4cCI6MjEwNTA0NDI2MH0.ov7CZKn_nQweeW3Mk22B5cLyp3bpQBcC_vAW7oFArhQ";
+    
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+
     const i18n = {
       id: {
         guestNotice: '👀 <strong>Anda sedang melihat versi Demo (Guest).</strong> Login untuk menghubungkan Akun MT5 Exness dan melihat saldo rabat asli Anda.',
@@ -167,6 +173,94 @@
       }
     };
 
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        setLoggedInUser(session.user);
+      }
+    });
+
+    function setLoggedInUser(user) {
+      currentUser = user;
+      document.getElementById('userStatus').className = "text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-medium";
+      document.getElementById('userStatus').innerText = user.email;
+
+      const authBtn = document.getElementById('authBtn');
+      authBtn.innerText = "Logout";
+      authBtn.onclick = handleLogout;
+      authBtn.className = "text-sm bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-medium px-4 py-1.5 rounded-lg transition";
+
+      document.getElementById('guestBanner').classList.add('hidden');
+
+      const mt5Input = document.getElementById('mt5Input');
+      const saveMt5Btn = document.getElementById('saveMt5Btn');
+      mt5Input.disabled = false;
+      mt5Input.classList.remove('cursor-not-allowed', 'opacity-60');
+      saveMt5Btn.disabled = false;
+      saveMt5Btn.classList.remove('cursor-not-allowed', 'opacity-60');
+      saveMt5Btn.classList.add('bg-sky-500', 'hover:bg-sky-600', 'text-white', 'cursor-pointer');
+
+      loadUserData(user.id);
+    }
+
+    async function loadUserData(userId) {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('exness_account_id')
+        .eq('id', userId)
+        .single();
+
+      if (data && data.exness_account_id) {
+        document.getElementById('mt5Input').value = data.exness_account_id;
+      }
+    }
+
+    async function handleRegister() {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+
+      if (!email || !password) return alert("Email dan password wajib diisi!");
+
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) alert("Gagal daftar: " + error.message);
+      else {
+        alert("Pendaftaran berhasil! Silakan cek email kamu untuk konfirmasi, atau langsung coba Login.");
+        toggleAuthModal();
+      }
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+
+      if (!email || !password) return alert("Email dan password wajib diisi!");
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) alert("Gagal login: " + error.message);
+      else {
+        setLoggedInUser(data.user);
+        toggleAuthModal();
+      }
+    }
+
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+      window.location.reload();
+    }
+
+    async function saveMt5Account() {
+      if (!currentUser) return;
+      const mt5Id = document.getElementById('mt5Input').value;
+      if (!mt5Id) return alert("Masukkan nomor akun MT5 Exness terlebih dahulu.");
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .upsert({ id: currentUser.id, exness_account_id: mt5Id });
+
+      if (error) alert("Gagal menyimpan ID MT5: " + error.message);
+      else alert("Nomor Akun MT5 Exness berhasil disimpan!");
+    }
+
     function changeLanguage() {
       const lang = document.getElementById('langSelect').value;
       const t = i18n[lang];
@@ -195,16 +289,6 @@
     function toggleAuthModal() {
       const modal = document.getElementById('authModal');
       modal.classList.toggle('hidden');
-    }
-
-    function handleLogin() {
-      alert("Fitur Login akan segera dihubungkan ke Supabase Auth!");
-      toggleAuthModal();
-    }
-
-    function handleRegister() {
-      alert("Fitur Register akan segera dihubungkan ke Supabase Auth!");
-      toggleAuthModal();
     }
   </script>
 </body>
