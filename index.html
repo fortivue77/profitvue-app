@@ -4,45 +4,74 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ProfitVue - Dashboard Rabat & Dividen</title>
-  <!-- Tailwind CSS CDN untuk Tampilan Modern -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col justify-between">
 
   <!-- NAVBAR -->
-  <nav class="border-b border-slate-800 bg-slate-950/80 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md">
+  <nav class="border-b border-slate-800 bg-slate-950/80 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md z-10">
     <div class="flex items-center gap-3">
       <span class="text-2xl">📈</span>
       <h1 class="text-xl font-bold tracking-wide">Profit<span class="text-sky-400">Vue</span></h1>
     </div>
-    <div class="text-sm text-slate-400">
-      User: <span class="text-slate-200 font-semibold" id="userEmail">Demo User</span>
+    
+    <div class="flex items-center gap-3">
+      <!-- PILIHAN BAHASA -->
+      <select id="langSelect" onchange="changeLanguage()" class="bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-sky-500 cursor-pointer">
+        <option value="id" selected>🇲🇨 ID</option>
+        <option value="en">🇬🇧 EN</option>
+      </select>
+
+      <span id="userStatus" class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full font-medium">Mode Guest</span>
+      <button id="authBtn" onclick="toggleAuthModal()" class="text-sm bg-sky-500 hover:bg-sky-600 text-white font-medium px-4 py-1.5 rounded-lg transition">Login / Register</button>
     </div>
   </nav>
 
-  <!-- KONTEN UTAMA -->
-  <main class="max-w-5xl mx-auto p-6 space-y-6">
+  <!-- KONTEN UTAMA DASHBOARD -->
+  <main class="max-w-5xl mx-auto p-6 space-y-6 w-full flex-1">
+
+    <!-- BANNER MODUS GUEST -->
+    <div id="guestBanner" class="bg-sky-950/40 border border-sky-800/50 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div id="txtGuestNotice" class="text-sm text-sky-200">
+        👀 <strong>Anda sedang melihat versi Demo (Guest).</strong> Login untuk menghubungkan Akun MT5 Exness dan melihat saldo rabat asli Anda.
+      </div>
+      <button id="btnGuestLogin" onclick="toggleAuthModal()" class="text-xs bg-sky-400 hover:bg-sky-300 text-slate-950 font-bold px-3 py-2 rounded-lg whitespace-nowrap">Login Sekarang</button>
+    </div>
+
+    <!-- CARD AKUN MT5 -->
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 id="txtMt5Title" class="text-base font-semibold text-slate-200">ID Akun Trading MT5 Exness</h3>
+        <p id="txtMt5Desc" class="text-xs text-slate-400">Hubungkan nomor akun trading untuk sinkronisasi otomatis rabat $1/lot.</p>
+      </div>
+      <div class="flex items-center gap-2 w-full md:w-auto">
+        <input type="text" id="mt5Input" placeholder="Contoh: 14829102" disabled class="bg-slate-900 border border-slate-700 text-slate-400 text-sm rounded-lg p-2.5 w-full md:w-64 cursor-not-allowed opacity-60">
+        <button id="saveMt5Btn" disabled class="bg-slate-700 text-slate-400 font-medium text-sm px-4 py-2.5 rounded-lg cursor-not-allowed opacity-60">Simpan</button>
+      </div>
+    </div>
 
     <!-- RINGKASAN CARDS -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Card Rabat Harian -->
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-slate-400 text-sm font-medium">💵 Rabat Trading (Hari Ini)</span>
+          <span id="txtRebateTitle" class="text-slate-400 text-sm font-medium">💵 Rabat Trading (Hari Ini)</span>
           <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">$1.00 / Lot</span>
         </div>
-        <div class="text-3xl font-extrabold text-emerald-400 mb-1" id="todayRebate">$0.00</div>
-        <p class="text-xs text-slate-400">Update otomatis real-time</p>
+        <div class="text-3xl font-extrabold text-emerald-400 mb-1">$0.00</div>
+        <p id="txtRebateSub" class="text-xs text-slate-400">Update otomatis real-time</p>
       </div>
 
       <!-- Card Estimasi Dividen -->
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-slate-400 text-sm font-medium">📈 Estimasi Dividen Bot (Bulan Ini)</span>
+          <span id="txtDividendTitle" class="text-slate-400 text-sm font-medium">📈 Estimasi Dividen Bot (Bulan Ini)</span>
           <span class="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded-full">50% Pool Share</span>
         </div>
-        <div class="text-3xl font-extrabold text-sky-400 mb-1" id="monthlyDividend">$0.00</div>
-        <p class="text-xs text-slate-400">Pencairan otomatis akhir bulan</p>
+        <div class="text-3xl font-extrabold text-sky-400 mb-1">$0.00</div>
+        <p id="txtDividendSub" class="text-xs text-slate-400">Pencairan otomatis akhir bulan</p>
       </div>
     </div>
 
@@ -50,43 +79,133 @@
     <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 class="text-lg font-semibold text-slate-200 mb-1">🏆 Status Porsi Dividen Abadi</h3>
-          <p class="text-sm text-slate-400">Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.</p>
+          <h3 id="txtPointsTitle" class="text-lg font-semibold text-slate-200 mb-1">🏆 Status Porsi Dividen Abadi</h3>
+          <p id="txtPointsDesc" class="text-sm text-slate-400">Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.</p>
         </div>
         <div class="bg-slate-900/80 px-4 py-3 rounded-lg border border-slate-700/50 text-right">
-          <div class="text-xs text-slate-400">Total Poin Abadi</div>
-          <div class="text-xl font-bold text-amber-400" id="userPoints">0.00 Poin</div>
+          <div id="txtPointsLabel" class="text-xs text-slate-400">Total Poin Abadi</div>
+          <div class="text-xl font-bold text-amber-400">0.00 Poin</div>
         </div>
-      </div>
-    </div>
-
-    <!-- TABEL RIWAYAT TRANSAKSI -->
-    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg">
-      <div class="px-6 py-4 border-b border-slate-700/60">
-        <h3 class="text-base font-semibold text-slate-200">Riwayat Rabat & Dividen</h3>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-slate-300">
-          <thead class="text-xs uppercase bg-slate-900/50 text-slate-400 border-b border-slate-700/60">
-            <tr>
-              <th class="px-6 py-3">Tanggal</th>
-              <th class="px-6 py-3">Keterangan</th>
-              <th class="px-6 py-3">Volume / Poin</th>
-              <th class="px-6 py-3">Hasil ($)</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-700/40">
-            <tr>
-              <td class="px-6 py-4 text-slate-400">15 Sep 2026</td>
-              <td class="px-6 py-4">Rabat Trading MT4</td>
-              <td class="px-6 py-4">2.00 Lot</td>
-              <td class="px-6 py-4 text-emerald-400 font-semibold">+$2.00</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
 
   </main>
+
+  <!-- MODAL POPUP LOGIN / REGISTER -->
+  <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+      <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-lg">✕</button>
+      
+      <h2 id="txtModalTitle" class="text-xl font-bold text-slate-100 mb-1">Masuk ke ProfitVue</h2>
+      <p id="txtModalSub" class="text-xs text-slate-400 mb-6">Kelola rabat trading & dividen abadi Anda</p>
+
+      <div class="space-y-4">
+        <div>
+          <label id="lblEmail" class="block text-xs text-slate-300 font-medium mb-1">Email</label>
+          <input type="email" id="emailInput" placeholder="nama@email.com" class="bg-slate-950 border border-slate-800 text-slate-100 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
+        </div>
+
+        <div>
+          <label id="lblPassword" class="block text-xs text-slate-300 font-medium mb-1">Password</label>
+          <input type="password" id="passwordInput" placeholder="••••••••" class="bg-slate-950 border border-slate-800 text-slate-100 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
+        </div>
+
+        <button id="btnLogin" onclick="handleLogin()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 rounded-lg transition text-sm">Masuk Akun</button>
+        <button id="btnRegister" onclick="handleRegister()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 rounded-lg transition text-sm border border-slate-700">Daftar Akun Baru</button>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 text-center">
+        <button id="btnContinueGuest" onclick="toggleAuthModal()" class="text-xs text-slate-400 hover:text-sky-400">Lanjutkan sebagai Guest (Hanya Lihat Dashboard)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC TRANSLATION -->
+  <script>
+    const i18n = {
+      id: {
+        guestNotice: '👀 <strong>Anda sedang melihat versi Demo (Guest).</strong> Login untuk menghubungkan Akun MT5 Exness dan melihat saldo rabat asli Anda.',
+        btnGuestLogin: 'Login Sekarang',
+        mt5Title: 'ID Akun Trading MT5 Exness',
+        mt5Desc: 'Hubungkan nomor akun trading untuk sinkronisasi otomatis rabat $1/lot.',
+        save: 'Simpan',
+        rebateTitle: '💵 Rabat Trading (Hari Ini)',
+        rebateSub: 'Update otomatis real-time',
+        dividendTitle: '📈 Estimasi Dividen Bot (Bulan Ini)',
+        dividendSub: 'Pencairan otomatis akhir bulan',
+        pointsTitle: '🏆 Status Porsi Dividen Abadi',
+        pointsDesc: 'Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.',
+        pointsLabel: 'Total Poin Abadi',
+        modalTitle: 'Masuk ke ProfitVue',
+        modalSub: 'Kelola rabat trading & dividen abadi Anda',
+        lblEmail: 'Email',
+        lblPassword: 'Password',
+        btnLogin: 'Masuk Akun',
+        btnRegister: 'Daftar Akun Baru',
+        btnContinueGuest: 'Lanjutkan sebagai Guest (Hanya Lihat Dashboard)'
+      },
+      en: {
+        guestNotice: '👀 <strong>You are viewing the Demo (Guest) version.</strong> Log in to connect your Exness MT5 Account and view real rebates.',
+        btnGuestLogin: 'Login Now',
+        mt5Title: 'Exness MT5 Trading Account ID',
+        mt5Desc: 'Connect your trading account number for automatic $1/lot rebate synchronization.',
+        save: 'Save',
+        rebateTitle: '💵 Trading Rebate (Today)',
+        rebateSub: 'Real-time automatic updates',
+        dividendTitle: '📈 Bot Dividend Estimate (This Month)',
+        dividendSub: 'Automatic payout at month-end',
+        pointsTitle: '🏆 Lifetime Dividend Share Status',
+        pointsDesc: 'Dividends are paid monthly even if you are not currently trading actively.',
+        pointsLabel: 'Total Lifetime Points',
+        modalTitle: 'Login to ProfitVue',
+        modalSub: 'Manage your trading rebates & lifetime dividends',
+        lblEmail: 'Email',
+        lblPassword: 'Password',
+        btnLogin: 'Sign In',
+        btnRegister: 'Register New Account',
+        btnContinueGuest: 'Continue as Guest (View Dashboard Only)'
+      }
+    };
+
+    function changeLanguage() {
+      const lang = document.getElementById('langSelect').value;
+      const t = i18n[lang];
+
+      document.getElementById('txtGuestNotice').innerHTML = t.guestNotice;
+      document.getElementById('btnGuestLogin').innerText = t.btnGuestLogin;
+      document.getElementById('txtMt5Title').innerText = t.mt5Title;
+      document.getElementById('txtMt5Desc').innerText = t.mt5Desc;
+      document.getElementById('saveMt5Btn').innerText = t.save;
+      document.getElementById('txtRebateTitle').innerText = t.rebateTitle;
+      document.getElementById('txtRebateSub').innerText = t.rebateSub;
+      document.getElementById('txtDividendTitle').innerText = t.dividendTitle;
+      document.getElementById('txtDividendSub').innerText = t.dividendSub;
+      document.getElementById('txtPointsTitle').innerText = t.pointsTitle;
+      document.getElementById('txtPointsDesc').innerText = t.pointsDesc;
+      document.getElementById('txtPointsLabel').innerText = t.pointsLabel;
+      document.getElementById('txtModalTitle').innerText = t.modalTitle;
+      document.getElementById('txtModalSub').innerText = t.modalSub;
+      document.getElementById('lblEmail').innerText = t.lblEmail;
+      document.getElementById('lblPassword').innerText = t.lblPassword;
+      document.getElementById('btnLogin').innerText = t.btnLogin;
+      document.getElementById('btnRegister').innerText = t.btnRegister;
+      document.getElementById('btnContinueGuest').innerText = t.btnContinueGuest;
+    }
+
+    function toggleAuthModal() {
+      const modal = document.getElementById('authModal');
+      modal.classList.toggle('hidden');
+    }
+
+    function handleLogin() {
+      alert("Fitur Login akan segera dihubungkan ke Supabase Auth!");
+      toggleAuthModal();
+    }
+
+    function handleRegister() {
+      alert("Fitur Register akan segera dihubungkan ke Supabase Auth!");
+      toggleAuthModal();
+    }
+  </script>
 </body>
 </html>
