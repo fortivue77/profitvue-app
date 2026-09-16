@@ -1,294 +1,388 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ProfitVue - Dashboard Rabat & Dividen</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProfitVue - IB Exness Dashboard</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Client Library -->
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- PapaParse for CSV Parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col justify-between">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
   <!-- NAVBAR -->
-  <nav class="border-b border-slate-800 bg-slate-950/80 px-6 py-4 flex justify-between items-center sticky top-0 backdrop-blur-md z-10">
-    <div class="flex items-center gap-3">
-      <span class="text-2xl">📈</span>
-      <h1 class="text-xl font-bold tracking-wide">Profit<span class="text-sky-400">Vue</span></h1>
+  <nav class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl font-bold text-emerald-400">ProfitVue</span>
+      <span class="bg-slate-700 text-xs text-slate-300 px-2 py-1 rounded">IB Partner</span>
     </div>
     
-    <div class="flex items-center gap-3">
-      <!-- PILIHAN BAHASA -->
-      <select id="langSelect" onchange="changeLanguage()" class="bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-sky-500 cursor-pointer">
-        <option value="id" selected>🇲🇨 ID</option>
-        <option value="en">🇬🇧 EN</option>
-      </select>
+    <div id="auth-buttons" class="space-x-2">
+      <!-- Tombol sebelum login -->
+      <button onclick="openModal('login')" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded text-sm font-medium">Masuk</button>
+      <button onclick="openModal('register')" class="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded text-sm font-medium">Daftar</button>
+    </div>
 
-      <span id="userStatus" class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full font-medium">Mode Guest</span>
-      <button id="authBtn" onclick="toggleAuthModal()" class="text-sm bg-sky-500 hover:bg-sky-600 text-white font-medium px-4 py-1.5 rounded-lg transition">Login / Register</button>
+    <div id="user-profile" class="hidden items-center space-x-4">
+      <!-- Info Akun Setelah Login -->
+      <span id="user-email-display" class="text-sm text-slate-300 font-mono">user@example.com</span>
+      <button onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-xs font-medium">Keluar</button>
     </div>
   </nav>
 
-  <!-- KONTEN UTAMA DASHBOARD -->
-  <main class="max-w-5xl mx-auto p-6 space-y-6 w-full flex-1">
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-grow container mx-auto px-4 py-8 max-w-5xl">
 
-    <!-- BANNER MODUS GUEST -->
-    <div id="guestBanner" class="bg-sky-950/40 border border-sky-800/50 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3">
-      <div id="txtGuestNotice" class="text-sm text-sky-200">
-        👀 <strong>Anda sedang melihat versi Demo (Guest).</strong> Login untuk menghubungkan Akun MT5 Exness dan melihat saldo rabat asli Anda.
-      </div>
-      <button id="btnGuestLogin" onclick="toggleAuthModal()" class="text-xs bg-sky-400 hover:bg-sky-300 text-slate-950 font-bold px-3 py-2 rounded-lg whitespace-nowrap">Login Sekarang</button>
-    </div>
+    <!-- ALERT BANNER -->
+    <div id="status-alert" class="hidden mb-6 p-4 rounded-lg border text-sm"></div>
 
-    <!-- CARD AKUN MT5 -->
-    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-5 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-      <div>
-        <h3 id="txtMt5Title" class="text-base font-semibold text-slate-200">ID Akun Trading MT5 Exness</h3>
-        <p id="txtMt5Desc" class="text-xs text-slate-400">Hubungkan nomor akun trading untuk sinkronisasi otomatis rabat $1/lot.</p>
+    <!-- ADMIN PANEL (HANYA MUNCUL DILOGIN ADMIN) -->
+    <div id="admin-panel" class="hidden bg-slate-800 border border-emerald-500/40 rounded-xl p-6 mb-8 shadow-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
+          ⚡ Admin Panel - Processing Laporan Exness CSV
+        </h2>
+        <span class="bg-emerald-900/50 text-emerald-300 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-full font-semibold">Admin Access</span>
       </div>
-      <div class="flex items-center gap-2 w-full md:w-auto">
-        <input type="text" id="mt5Input" placeholder="Contoh: 14829102" disabled class="bg-slate-900 border border-slate-700 text-slate-400 text-sm rounded-lg p-2.5 w-full md:w-64 cursor-not-allowed opacity-60">
-        <button id="saveMt5Btn" onclick="saveMt5Account()" disabled class="bg-slate-700 text-slate-400 font-medium text-sm px-4 py-2.5 rounded-lg cursor-not-allowed opacity-60">Simpan</button>
-      </div>
-    </div>
-
-    <!-- RINGKASAN CARDS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Card Rabat Harian -->
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-          <span id="txtRebateTitle" class="text-slate-400 text-sm font-medium">💵 Rabat Trading (Hari Ini)</span>
-          <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full">$1.00 / Lot</span>
-        </div>
-        <div id="rebateValue" class="text-3xl font-extrabold text-emerald-400 mb-1">$0.00</div>
-        <p id="txtRebateSub" class="text-xs text-slate-400">Update otomatis real-time</p>
-      </div>
-
-      <!-- Card Estimasi Dividen -->
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
-        <div class="flex items-center justify-between mb-2">
-          <span id="txtDividendTitle" class="text-slate-400 text-sm font-medium">📈 Estimasi Dividen Bot (Bulan Ini)</span>
-          <span class="text-xs bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded-full">50% Pool Share</span>
-        </div>
-        <div id="dividendValue" class="text-3xl font-extrabold text-sky-400 mb-1">$0.00</div>
-        <p id="txtDividendSub" class="text-xs text-slate-400">Pencairan otomatis akhir bulan</p>
+      <p class="text-slate-400 text-sm mb-4">
+        Upload file CSV laporan transaksi dari Exness Partner. Sistem akan otomatis mencocokkan nomor MT5 user, menambah $1/lot ke Rabat User, dan $1/lot ke Pool Dividen Bot.
+      </p>
+      <div class="flex items-center space-x-4">
+        <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-emerald-400 hover:file:bg-slate-600 border border-slate-700 rounded-lg bg-slate-900/50 cursor-pointer">
+        <button onclick="processExnessCSV()" class="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition">Proses CSV</button>
       </div>
     </div>
 
-    <!-- CARD POIN ABADI -->
-    <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-6 shadow-lg">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 id="txtPointsTitle" class="text-lg font-semibold text-slate-200 mb-1">🏆 Status Porsi Dividen Abadi</h3>
-          <p id="txtPointsDesc" class="text-sm text-slate-400">Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.</p>
-        </div>
-        <div class="bg-slate-900/80 px-4 py-3 rounded-lg border border-slate-700/50 text-right">
-          <div id="txtPointsLabel" class="text-xs text-slate-400">Total Poin Abadi</div>
-          <div id="pointsValue" class="text-xl font-bold text-amber-400">0.00 Poin</div>
-        </div>
+    <!-- STATS DASHBOARD -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      
+      <!-- Card 1: Saldo Rabat Trading -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-md">
+        <div class="text-slate-400 text-sm mb-1">Rabat Trading Anda</div>
+        <div id="display-rebate" class="text-3xl font-extrabold text-emerald-400">$0.00</div>
+        <div class="text-xs text-slate-500 mt-2">Dihitung otomatis per lot ($1.00/lot)</div>
+      </div>
+
+      <!-- Card 2: Dividen Bot Trading -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-md">
+        <div class="text-slate-400 text-sm mb-1">Dividen Bot (Pool)</div>
+        <div id="display-dividend" class="text-3xl font-extrabold text-cyan-400">$0.00</div>
+        <div class="text-xs text-slate-500 mt-2">Poin Abadi Aktif: <span id="display-points" class="font-bold text-slate-300">0</span> Pts</div>
+      </div>
+
+      <!-- Card 3: Akun MT5 Exness -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-md">
+        <div class="text-slate-400 text-sm mb-1">ID MT5 Exness Terhubung</div>
+        <div id="display-mt5" class="text-xl font-bold text-slate-200 mt-1">Belum Ada</div>
+        <button onclick="openMT5Modal()" class="mt-3 text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-emerald-400 font-medium">Ubah / Hubungkan ID MT5</button>
+      </div>
+
+    </div>
+
+    <!-- TABEL RIWAYAT TRANSAKSI -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-md mb-8">
+      <h3 class="text-lg font-bold mb-4 text-slate-200">Riwayat Pembagian Rabat & Dividen</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase border-b border-slate-700">
+            <tr>
+              <th class="py-3 px-4">Tanggal</th>
+              <th class="py-3 px-4">Nomor MT5</th>
+              <th class="py-3 px-4">Volume (Lot)</th>
+              <th class="py-3 px-4">Rabat User ($)</th>
+              <th class="py-3 px-4">Pool Bot ($)</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="divide-y divide-slate-700/50">
+            <tr>
+              <td colspan="5" class="py-6 text-center text-slate-500">Belum ada riwayat transaksi. Login dan simpan ID MT5 untuk melihat riwayat.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
   </main>
 
-  <!-- MODAL POPUP LOGIN / REGISTER -->
-  <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
-      <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-lg">✕</button>
-      
-      <h2 id="txtModalTitle" class="text-xl font-bold text-slate-100 mb-1">Masuk ke ProfitVue</h2>
-      <p id="txtModalSub" class="text-xs text-slate-400 mb-6">Kelola rabat trading & dividen abadi Anda</p>
+  <!-- FOOTER -->
+  <footer class="bg-slate-800 border-t border-slate-700 py-4 text-center text-xs text-slate-500">
+    &copy; 2026 ProfitVue IB Exness - Automatic Cashback System
+  </footer>
 
-      <div class="space-y-4">
-        <div>
-          <label id="lblEmail" class="block text-xs text-slate-300 font-medium mb-1">Email</label>
-          <input type="email" id="emailInput" placeholder="nama@email.com" class="bg-slate-950 border border-slate-800 text-slate-100 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
-        </div>
-
-        <div>
-          <label id="lblPassword" class="block text-xs text-slate-300 font-medium mb-1">Password</label>
-          <input type="password" id="passwordInput" placeholder="••••••••" class="bg-slate-950 border border-slate-800 text-slate-100 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
-        </div>
-
-        <button id="btnLogin" onclick="handleLogin()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-semibold py-3 rounded-lg transition text-sm">Masuk Akun</button>
-        <button id="btnRegister" onclick="handleRegister()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 rounded-lg transition text-sm border border-slate-700">Daftar Akun Baru</button>
+  <!-- MODAL AUTH (LOGIN / REGISTER) -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h3 id="modal-title" class="text-xl font-bold text-emerald-400">Masuk Akun</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white">&times;</button>
       </div>
 
-      <div class="mt-6 pt-4 border-t border-slate-800 text-center">
-        <button id="btnContinueGuest" onclick="toggleAuthModal()" class="text-xs text-slate-400 hover:text-sky-400">Lanjutkan sebagai Guest (Hanya Lihat Dashboard)</button>
-      </div>
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="mb-4">
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Email</label>
+          <input type="email" id="auth-email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 focus:outline-none focus:border-emerald-500">
+        </div>
+        <div class="mb-6">
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Password</label>
+          <input type="password" id="auth-password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 focus:outline-none focus:border-emerald-500">
+        </div>
+        <button type="submit" id="modal-submit-btn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-2.5 rounded-lg transition">Masuk</button>
+      </form>
     </div>
   </div>
 
-  <!-- SUPABASE INTEGRATION SCRIPT -->
+  <!-- MODAL EDIT MT5 ID -->
+  <div id="mt5-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-emerald-400">Simpan Akun MT5 Exness</h3>
+        <button onclick="closeMT5Modal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <form onsubmit="handleMT5Submit(event)">
+        <div class="mb-6">
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Nomor Akun MT5</label>
+          <input type="text" id="mt5-input" placeholder="Contoh: 88231940" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 focus:outline-none focus:border-emerald-500">
+        </div>
+        <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-2.5 rounded-lg transition">Simpan MT5 ID</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT UTAMA UTK SUPABASE & LOGIC -->
   <script>
-    const SUPABASE_URL = "https://aahmyoivscfuytpastlp.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhaG15b2l2c2NmdXl0cGFzdGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NjgyNjAsImV4cCI6MjEwNTA0NDI2MH0.ov7CZKn_nQweeW3Mk22B5cLyp3bpQBcC_vAW7oFArhQ";
+    // 1. INI KONFIGURASI SUPABASE KAMU
+    const SUPABASE_URL = "https://otkthvceuknawwosubdr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90a3RodmNldWtuYXd3b3N1YmRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIzNjcyMDcsImV4cCI6MjA1Nzk0MzIwN30.ZzCstJtN_1O2OByK7S3c3qH1P4G8H1K_2J9J7c2Z1K0"; // Anon Key Anda
     
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let currentUser = null;
 
-    const i18n = {
-      id: {
-        guestNotice: '👀 <strong>Anda sedang melihat versi Demo (Guest).</strong> Login untuk menghubungkan Akun MT5 Exness dan melihat saldo rabat asli Anda.',
-        btnGuestLogin: 'Login Sekarang',
-        mt5Title: 'ID Akun Trading MT5 Exness',
-        mt5Desc: 'Hubungkan nomor akun trading untuk sinkronisasi otomatis rabat $1/lot.',
-        save: 'Simpan',
-        rebateTitle: '💵 Rabat Trading (Hari Ini)',
-        rebateSub: 'Update otomatis real-time',
-        dividendTitle: '📈 Estimasi Dividen Bot (Bulan Ini)',
-        dividendSub: 'Pencairan otomatis akhir bulan',
-        pointsTitle: '🏆 Status Porsi Dividen Abadi',
-        pointsDesc: 'Dividen tetap cair setiap bulan meskipun Anda sedang tidak aktif trading.',
-        pointsLabel: 'Total Poin Abadi',
-        modalTitle: 'Masuk ke ProfitVue',
-        modalSub: 'Kelola rabat trading & dividen abadi Anda',
-        lblEmail: 'Email',
-        lblPassword: 'Password',
-        btnLogin: 'Masuk Akun',
-        btnRegister: 'Daftar Akun Baru',
-        btnContinueGuest: 'Lanjutkan sebagai Guest (Hanya Lihat Dashboard)'
-      },
-      en: {
-        guestNotice: '👀 <strong>You are viewing the Demo (Guest) version.</strong> Log in to connect your Exness MT5 Account and view real rebates.',
-        btnGuestLogin: 'Login Now',
-        mt5Title: 'Exness MT5 Trading Account ID',
-        mt5Desc: 'Connect your trading account number for automatic $1/lot rebate synchronization.',
-        save: 'Save',
-        rebateTitle: '💵 Trading Rebate (Today)',
-        rebateSub: 'Real-time automatic updates',
-        dividendTitle: '📈 Bot Dividend Estimate (This Month)',
-        dividendSub: 'Automatic payout at month-end',
-        pointsTitle: '🏆 Lifetime Dividend Share Status',
-        pointsDesc: 'Dividends are paid monthly even if you are not currently trading actively.',
-        pointsLabel: 'Total Lifetime Points',
-        modalTitle: 'Login to ProfitVue',
-        modalSub: 'Manage your trading rebates & lifetime dividends',
-        lblEmail: 'Email',
-        lblPassword: 'Password',
-        btnLogin: 'Sign In',
-        btnRegister: 'Register New Account',
-        btnContinueGuest: 'Continue as Guest (View Dashboard Only)'
-      }
+    let currentMode = 'login';
+    let currentUser = null;
+    let currentUserProfile = null;
+
+    // EMAIL ADMIN KAMU (Ubah sesuai email login admin kamu)
+    const ADMIN_EMAIL = "admin@profitvue.com"; // <-- Sesuaikan email admin di sini
+
+    window.onload = async () => {
+      checkUserSession();
     };
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    async function checkUserSession() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
-        setLoggedInUser(session.user);
+        currentUser = session.user;
+        showLoggedInUI(currentUser);
+        await loadUserProfile(currentUser.id);
+        await loadTransactionHistory();
+      } else {
+        showLoggedOutUI();
       }
-    });
-
-    function setLoggedInUser(user) {
-      currentUser = user;
-      document.getElementById('userStatus').className = "text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-medium";
-      document.getElementById('userStatus').innerText = user.email;
-
-      const authBtn = document.getElementById('authBtn');
-      authBtn.innerText = "Logout";
-      authBtn.onclick = handleLogout;
-      authBtn.className = "text-sm bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-medium px-4 py-1.5 rounded-lg transition";
-
-      document.getElementById('guestBanner').classList.add('hidden');
-
-      const mt5Input = document.getElementById('mt5Input');
-      const saveMt5Btn = document.getElementById('saveMt5Btn');
-      mt5Input.disabled = false;
-      mt5Input.classList.remove('cursor-not-allowed', 'opacity-60');
-      saveMt5Btn.disabled = false;
-      saveMt5Btn.classList.remove('cursor-not-allowed', 'opacity-60');
-      saveMt5Btn.classList.add('bg-sky-500', 'hover:bg-sky-600', 'text-white', 'cursor-pointer');
-
-      loadUserData(user.id);
     }
 
-    async function loadUserData(userId) {
+    function showLoggedInUI(user) {
+      document.getElementById('auth-buttons').classList.add('hidden');
+      document.getElementById('user-profile').classList.remove('hidden');
+      document.getElementById('user-email-display').innerText = user.email;
+
+      // Cek apakah user adalah admin
+      if (user.email === ADMIN_EMAIL) {
+        document.getElementById('admin-panel').classList.remove('hidden');
+      } else {
+        document.getElementById('admin-panel').classList.add('hidden');
+      }
+    }
+
+    function showLoggedOutUI() {
+      document.getElementById('auth-buttons').classList.remove('hidden');
+      document.getElementById('user-profile').classList.add('hidden');
+      document.getElementById('admin-panel').classList.add('hidden');
+      document.getElementById('display-rebate').innerText = "$0.00";
+      document.getElementById('display-dividend').innerText = "$0.00";
+      document.getElementById('display-points').innerText = "0";
+      document.getElementById('display-mt5').innerText = "Belum Ada";
+      document.getElementById('history-table-body').innerHTML = `
+        <tr>
+          <td colspan="5" class="py-6 text-center text-slate-500">Silakan masuk ke akun Anda untuk melihat data.</td>
+        </tr>
+      `;
+    }
+
+    async function loadUserProfile(userId) {
       const { data, error } = await supabaseClient
         .from('profiles')
-        .select('exness_account_id')
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (data && data.exness_account_id) {
-        document.getElementById('mt5Input').value = data.exness_account_id;
+      if (data) {
+        currentUserProfile = data;
+        document.getElementById('display-rebate').innerText = `$${(data.rebates || 0).toFixed(2)}`;
+        document.getElementById('display-dividend').innerText = `$${(data.dividends || 0).toFixed(2)}`;
+        document.getElementById('display-points').innerText = data.points || 0;
+        document.getElementById('display-mt5').innerText = data.mt5_id || "Belum Dihubungkan";
       }
     }
 
-    async function handleRegister() {
-      const email = document.getElementById('emailInput').value;
-      const password = document.getElementById('passwordInput').value;
+    async function loadTransactionHistory() {
+      if (!currentUserProfile || !currentUserProfile.mt5_id) return;
 
-      if (!email || !password) return alert("Email dan password wajib diisi!");
+      const { data, error } = await supabaseClient
+        .from('transactions')
+        .select('*')
+        .eq('mt5_id', currentUserProfile.mt5_id)
+        .order('created_at', { ascending: false });
 
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) alert("Gagal daftar: " + error.message);
-      else {
-        alert("Pendaftaran berhasil! Silakan cek email kamu untuk konfirmasi, atau langsung coba Login.");
-        toggleAuthModal();
+      const tableBody = document.getElementById('history-table-body');
+
+      if (data && data.length > 0) {
+        tableBody.innerHTML = data.map(tx => `
+          <tr class="hover:bg-slate-700/30">
+            <td class="py-3 px-4">${new Date(tx.created_at).toLocaleDateString('id-ID')}</td>
+            <td class="py-3 px-4 font-mono">${tx.mt5_id}</td>
+            <td class="py-3 px-4 font-bold text-slate-200">${tx.lots} Lot</td>
+            <td class="py-3 px-4 text-emerald-400 font-semibold">+$${(tx.user_rebate || 0).toFixed(2)}</td>
+            <td class="py-3 px-4 text-cyan-400 font-semibold">+$${(tx.pool_bot || 0).toFixed(2)}</td>
+          </tr>
+        `).join('');
+      } else {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-6 text-center text-slate-500">Belum ada riwayat komisi trading untuk akun MT5 ini.</td>
+          </tr>
+        `;
       }
     }
 
-    async function handleLogin() {
-      const email = document.getElementById('emailInput').value;
-      const password = document.getElementById('passwordInput').value;
+    // AUTH SUBMIT LOGIC
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
 
-      if (!email || !password) return alert("Email dan password wajib diisi!");
+      let res;
+      if (currentMode === 'login') {
+        res = await supabaseClient.auth.signInWithPassword({ email, password });
+      } else {
+        res = await supabaseClient.auth.signUp({ email, password });
+      }
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert("Gagal login: " + error.message);
-      else {
-        setLoggedInUser(data.user);
-        toggleAuthModal();
+      if (res.error) {
+        showAlert('red', res.error.message);
+      } else {
+        showAlert('emerald', currentMode === 'login' ? 'Login Berhasil!' : 'Pendaftaran Berhasil!');
+        closeModal();
+        checkUserSession();
       }
     }
 
     async function handleLogout() {
       await supabaseClient.auth.signOut();
-      window.location.reload();
+      checkUserSession();
+      showAlert('emerald', 'Berhasil keluar akun.');
     }
 
-    async function saveMt5Account() {
+    // MT5 SUBMIT LOGIC
+    async function handleMT5Submit(e) {
+      e.preventDefault();
+      const mt5Id = document.getElementById('mt5-input').value.trim();
+
       if (!currentUser) return;
-      const mt5Id = document.getElementById('mt5Input').value;
-      if (!mt5Id) return alert("Masukkan nomor akun MT5 Exness terlebih dahulu.");
 
       const { error } = await supabaseClient
         .from('profiles')
-        .upsert({ id: currentUser.id, exness_account_id: mt5Id });
+        .update({ mt5_id: mt5Id })
+        .eq('id', currentUser.id);
 
-      if (error) alert("Gagal menyimpan ID MT5: " + error.message);
-      else alert("Nomor Akun MT5 Exness berhasil disimpan!");
+      if (error) {
+        showAlert('red', error.message);
+      } else {
+        showAlert('emerald', 'ID MT5 berhasil disimpan!');
+        closeMT5Modal();
+        loadUserProfile(currentUser.id);
+      }
     }
 
-    function changeLanguage() {
-      const lang = document.getElementById('langSelect').value;
-      const t = i18n[lang];
+    // PROSES UPLOAD CSV ADMIN
+    function processExnessCSV() {
+      const fileInput = document.getElementById('csv-file-input');
+      const file = fileInput.files[0];
 
-      document.getElementById('txtGuestNotice').innerHTML = t.guestNotice;
-      document.getElementById('btnGuestLogin').innerText = t.btnGuestLogin;
-      document.getElementById('txtMt5Title').innerText = t.mt5Title;
-      document.getElementById('txtMt5Desc').innerText = t.mt5Desc;
-      document.getElementById('saveMt5Btn').innerText = t.save;
-      document.getElementById('txtRebateTitle').innerText = t.rebateTitle;
-      document.getElementById('txtRebateSub').innerText = t.rebateSub;
-      document.getElementById('txtDividendTitle').innerText = t.dividendTitle;
-      document.getElementById('txtDividendSub').innerText = t.dividendSub;
-      document.getElementById('txtPointsTitle').innerText = t.pointsTitle;
-      document.getElementById('txtPointsDesc').innerText = t.pointsDesc;
-      document.getElementById('txtPointsLabel').innerText = t.pointsLabel;
-      document.getElementById('txtModalTitle').innerText = t.modalTitle;
-      document.getElementById('txtModalSub').innerText = t.modalSub;
-      document.getElementById('lblEmail').innerText = t.lblEmail;
-      document.getElementById('lblPassword').innerText = t.lblPassword;
-      document.getElementById('btnLogin').innerText = t.btnLogin;
-      document.getElementById('btnRegister').innerText = t.btnRegister;
-      document.getElementById('btnContinueGuest').innerText = t.btnContinueGuest;
+      if (!file) {
+        showAlert('red', 'Silakan pilih file CSV Exness terlebih dahulu!');
+        return;
+      }
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async function (results) {
+          const rows = results.data;
+          let countProcessed = 0;
+
+          for (const row of rows) {
+            // Mencari field MT5 ID & Lot dari CSV Exness
+            const mt5Id = row['Account Number'] || row['Account'] || row['MT5 ID'];
+            const lots = parseFloat(row['Lots'] || row['Volume'] || row['Trading Volume'] || 0);
+
+            if (mt5Id && lots > 0) {
+              const userRebate = lots * 1.0; // $1 untuk user
+              const poolBot = lots * 1.0;    // $1 untuk pool bot
+
+              // 1. Tambah riwayat transaksi
+              await supabaseClient.from('transactions').insert([
+                { mt5_id: String(mt5Id).trim(), lots: lots, user_rebate: userRebate, pool_bot: poolBot }
+              ]);
+
+              // 2. Update saldo rebate user di profiles
+              const { data: profiles } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('mt5_id', String(mt5Id).trim());
+
+              if (profiles && profiles.length > 0) {
+                const userProf = profiles[0];
+                const newRebate = (userProf.rebates || 0) + userRebate;
+                const newPoints = (userProf.points || 0) + Math.floor(lots);
+
+                await supabaseClient
+                  .from('profiles')
+                  .update({ rebates: newRebate, points: newPoints })
+                  .eq('id', userProf.id);
+              }
+
+              countProcessed++;
+            }
+          }
+
+          showAlert('emerald', `Sukses memproses ${countProcessed} baris data dari CSV Exness!`);
+          fileInput.value = '';
+          if (currentUser) loadUserProfile(currentUser.id);
+          loadTransactionHistory();
+        }
+      });
     }
 
-    function toggleAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.toggle('hidden');
+    // UI HELPER FUNCTIONS
+    function openModal(mode) {
+      currentMode = mode;
+      document.getElementById('modal-title').innerText = mode === 'login' ? 'Masuk Akun' : 'Daftar Akun Baru';
+      document.getElementById('modal-submit-btn').innerText = mode === 'login' ? 'Masuk' : 'Daftar';
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+    function closeModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+    function openMT5Modal() { document.getElementById('mt5-modal').classList.remove('hidden'); }
+    function closeMT5Modal() { document.getElementById('mt5-modal').classList.add('hidden'); }
+
+    function showAlert(color, message) {
+      const alert = document.getElementById('status-alert');
+      alert.className = `mb-6 p-4 rounded-lg border text-sm bg-${color}-900/40 border-${color}-500/50 text-${color}-300`;
+      alert.innerText = message;
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 4000);
     }
   </script>
 </body>
